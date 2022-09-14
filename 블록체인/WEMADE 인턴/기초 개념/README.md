@@ -252,3 +252,120 @@ PoS는 누군가가 과반을 점유하기 너무 쉬운 구조라서(자금을 
 * (어카운트 기반) 블록체인의 상태  
 블록체인은 트랜잭션으로 변화하는 상태 기계(State Machine)  
 
+초기값(initial), 최종값(final): 초기값을 변경(Change)을 했더니 최종값이 나옴  
+![image](https://user-images.githubusercontent.com/46364778/190264489-08bd5e14-a733-4a7c-835d-712acfe7f485.png)
+
+블록을 생성하는 사람에게서 토큰을 줄 때, 특정 account(보통 자신의 account)에 토큰을 주게 되고, 항상 from(source)와 to가 있음  
+source가 coinbase: 이 사람이 mining 했구나(여기서는 Alice가 Coinbase로 부터 토큰을 받았으므로, Alice가 이 블록을 캤구나, 블록을 제안해서 받아들여졌구나 알 수 있음)  
+앞의 블록의 최종값이 다음 블록의 초기값!  
+즉 초기값은 이전 블록의 상태이고, 최종값은 현재 블록의 상태이다!  
+변경 사항들을 계속 적용하면서 상태를 유지해 나감  
+변경 사항 = Transaction
+
+* 상태 기계  
+블록체인은 초기 상태에서 변경사항을 적용하여 최종 상태로 변화하는 상태 기계  
+이전 블록의 최종 상태는(final state)는 현재 블록의 초기 상태(initial state)  
+Gen block의 경우 임의의 초기값들이 설정되는데 이것이 gen block의 초기상태이자 최종상태  
+
+* (어가운트 기반) 블록체인의 상태  
+TX는 어카운트를 생성하거나 변경
+> e.g., Alice가 기존에 존재하지 않던 주소 X에 ETH를 전송하면 새로운 EOA가 생성  
+> e.g., Alice가 새로운 스마트 컨트랙트를 배포(컨트랙트도 어카운트)  
+> e.g., Alice가 Bob에게 5 ETH를 전송하는 TX가 체결되면 Alice의 Bob의 잔고가 변경  
+항상 같은 결과를 보장하기 위해 하나의 TX가 반영되는 과정에서 다른 TX의 개입은 제한됨.  
+
++) 블록체인에서는 명시적으로 회원가입이라는 프로세스가 없음. 어카운트를 만드는 것은 key pair를 만드는 것. 그 key pair와 연관되어 있는 TX을 만들고, 그 TX이 블록체인에 변경을 더해줘야지만 그 account의 존재가 블록체인에 알려지는 것.(물론 변경된 결과는 모두가 동의해야지)  
+
+- - -  
+
+* (Recall) Ethereum 어카운트의 종류  
+1. External Account: 사용자(end user)가 사용하는 어카운트 (a.k.a. EOA)  
+2. Contract Account: 스마트 컨트랙트를 표현하는 어카운트  
+
+-Ethereum은 EOA와 스마트 컨트랙트의 상태를 기록 및 유지  
+스마트 컨트랙트는 특정 주소에 존재하는 실행 가능한 프로그램  
+프로그램(코드+데이터)은 상태를 가지기 때문에 Ethereum/Klaytn은 스마트 컨트랙트를 어카운트로 표현  
+
+-EOA는 블록에 기록되는 TX를 생성  
+블록에 기록되는 TX들은 명시적인 변경을 일으킴(e.g., 토큰 전송, 스마트 컨트랙트 배포/실행)  
+
+
+### 트랜잭션(TX)과 가스(Gas)  
+
+* TX의 목적은 블록체인의 상태를 변경하는 것  
+TX는 보내는 사람(sender, from)과 받는 사람(recipient, to)이 지정되어 있으며  
+to가 누구냐에 따라 TX의 목적이 세분화  
+> To가 External Account(사용자)면, 그냥 토큰 전송한 것(value transfer)  
+> Sender가 External Account인데 To가 Contract Account면, 컨트랙트가 실행이 됨  
+> To가 지정이 안되는 경우, 컨트랙트를 배포한다고 봄.  
+
+* Gas: TX를 처리하는데 발생하는 비용  
+TX를 처리하는데 필요한 자원(computing power, storage)을 비용으로 전환한 것이 가스(gas)  
+Sender는 TX의 처리를 위해 필요한 가스의 총량과 같은 가치의 플랫폼 토큰을 제공해야함  
+이때 지출되는 플랫폼 토큰을 가스비(Gas Fee)라 정의(블록체인의 유틸리티를 쓰기 위해 비용을 지불하는 것)    
+가스비는 블록을 생성한 노드가 수집  
+
+transaction fee를 높이 쓸 수록 채굴자가 먼저 처리해줌. 즉, tx이 블록에 빠르게 들어감(이더리움은 느리니까)  
+연산 비용과 실제 토큰을 분리해 놓은 것. 연산 비용을 이더리움에서는 가스라고 부름.  
+
+클레이튼: 그럼 네트워크 자체가 빠르면 될 거 아니야? 우리는 충분히 빠르니까 가스 price 쓸 수 없게 하자! 그래서 사용자들끼리 경쟁하는 일은 없음, 그냥 FIFO
+
+### 트랜잭션과 서명  
+* 플랫폼은 sender가 TX가 처리되는데 필요한 가스비를 가지고 있는지 확인  
+가스비 확인은 구현에 따라 상이  
+Ethereum/Klaytn은 노드가 TX를 수신함과 동시에 가스비 이상의 balance가 있는지 확인  
+TX의 체결과 동시에 sender의 balance에서 가스비를 차감  
+
+* TX는 sender의 서명(v, r, s)이 필요  
+어카운트의 balance를 사용하기 때문  
+서명의 증명은 구현마다 상이  
+> Ethereum: 서명 -> 공개키 노출 -> 어카운트 주소 도출 -> 어카운트 존재유무 확인  
+> Klaytn: from 주소 확인 -> 저장된 공개키 불러오기 -> 서명 직접 검증  
+> 이더리움은 서명으로 공개키를 뽑아냄(이더리움이 그런 함수(서명 -> 공개키)를 개발, 채굴자가 뽑아내서 검증, 이 함수가 연산량이 늘어나는 주범!)  
+
+* 트랜잭션 예시  
+![image](https://user-images.githubusercontent.com/46364778/190269797-8187ea73-d9b5-49c3-ac6c-025eaf811386.png)  
+
+nonce: (nonce가 tx에 있는건 account 기반 블록체인의 특징, sequential 하게 만듦) account가 몇 번째 tx를 보내는지 말해줌.  
+> 블록체인의 병렬화를 막는 원인. 비트코인은 병렬화가 가능하지만 이더리움은 불가능하다고 누군가 말하면 논스를 말하는 것  
+
+![image](https://user-images.githubusercontent.com/46364778/190270282-8dcd896d-0f91-4f0b-bcfb-8a4a664a5644.png)  
+
+이더리움은 from이 없음 -> 256 비트 아끼려고  
+대신 가스비가 있음. gas price와 gas를 곱하면 내가 이 tx를 위해 지불하는 금액이 됨.  
+V, R, S가 전자 서명임.  
+
+![image](https://user-images.githubusercontent.com/46364778/190270497-970456ec-8787-4dbf-9135-7a3c617d30ad.png)  
+
+type: 뭐하는 tx인지 설명(eth 같이 type이 없으면 to가 누구냐를 확인하기 전까지는 이 tx이 뭐하는 tx인지 모름. to를 보고 짐작)  
+gasPrice는 고정값. 사용자가 바꿀 수 없음  
+
+> 클레이튼의 가스비는 이더리움의 1/10 미만이 되도록 유지 함  
+> 이 값은 전체 노드들이 합의하면 바뀔 수 있음.  
+
+### Transaction Journey  
+![image](https://user-images.githubusercontent.com/46364778/190270934-2a00493c-c65b-4fc7-a4d8-ced95fc601fd.png)  
+
+Receipt는 컨트랙트를 배포할 때 가장 유용. 컨트랙트가 어디에 배포되었는지 주소를 영수증에 적어줌.(사용자 레벨에서 확인이 가능하지만 번거로우니까)  
+
+사용자와 노드는 같은 프로토콜로 통신해야함.  
+
+**Alice와 Node 사이 통신**  
+**Alice -> Node**  
+-Alice는 TX를 생성, 서명하여 Node에게 전달  
+-이때 데이터 구조를 온전하게 전달하고자 RLP 알고리즘으로 TX를 직렬화  
+-Alice와 Node가 같은 프로토콜로 통신하는 것이 중요  
+
+**Node -> Alice**  
+-올바른 TX 수신 시 TX 해시를 반환  
+-TX 체결 시 Receipt를 반환; 소요된 Gas, TX 해시, input 등이 기록  
+
+- - -
+
+
+
+
+
+
+
+
