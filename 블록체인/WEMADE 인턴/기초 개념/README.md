@@ -362,10 +362,281 @@ Receipt는 컨트랙트를 배포할 때 가장 유용. 컨트랙트가 어디�
 
 - - -
 
+### Smart Contracts  
+
+블록체인에 저장되어 있는 프로그램. 어디에 저장되어 있는지 알기 위해 주소를 씀.  
+실제로 이더리움 코드 까보면, 어카운트 라는 코드가 있고 그 안에 코드 해시라는 값이 있음. 이걸 가지고 블록체인에 있는 코드를 불러올 수 있는 구조.  
+블록체인의 상태를 바꿀 수 있는건 스마트 컨트랙트밖에 없음.  
+
+* 특정 주소에 배포되어 있는 TX로 실행 가능한 코드  
+스마트 컨트랙트 소스코드는 **함수**와 **상태**를 표현; 컨트랙트 소스코드는 블록체인에 저장  
+함수는 상태를 변경하는 함수, 상태를 변경하지 않는 함수로 분류  
+사용자(end user, EOA owner)가 스마트 컨트랙트 함수를 실행하거나 상태를 읽을 때 주소가 필요  
+
+* 스마트 컨트랙트는 사용자가 실행  
+상태를 변경하는 함수를 실행하려면 그에 맞는 TX를 생성하여 블록에 추가(TX 체결 = 함수의 실행)  
+상태를 변경하지 않는 함수, 상태를 읽는 행위는 TX가 필요 없음(노드에서 실행)  
 
 
+### Solidity  
+Ethereum/Klaytn에서 지원하는 스마트 컨트랙트 언어  
+Klaytn은 Solidity 버전 0.4.24, 0.5.6을 지원  
+일반적인 프로그래밍 언어와 그 문법과 사용이 유사하나 몇가지 제약이 존재(e.g., 포인터의 개념이 없기 때문에 recursive type의 선언이 불가능)  
 
+* Contract = Code + Data  
+Solidity 컨트랙트는 코드(함수)와 데이터(상태)로 구성  
+Solidity 함수는 코드 안에 변수로 선언된 상태를 변경하거나 불러옴  
+아래 예시에서 set, get은 함수, storedData는 상태  
 
+```
+contract SimpleStorage {
+  uint storedData;
+  
+  function set(uint x) public {
+    storedData = x;
+  }
+  
+  function get() public view returns (uint) {
+    return storedData;
+  }
+}
+```
 
+* Solidity 예제 - Coin 컨트랙트  
+[컨트랙트 예제](https://docs.soliditylang.org/en/v0.6.1/introduction-to-smart-contracts.html#subcurrency-example)  
 
+```
+// Solidity로 간단한 포인트 시스템을 구현  
+// [Coin 컨트랙트]
+// 컨트랙트 생성자가 관리하는 포인트 시스템 컨트랙트로 포인트 시스템 고유의 주소공간(address space)을 가지며 각 주소의 포인트 잔고를 기록한다.
+// 컨트랙트 생성하는 사용자 주소(e.g., 0xALICE)에 포인트를 부여할 수 있고 사용자는 다른 사용자에게 포인트를 전송할 수 있다 (e.g., 0XALICE -> 0XBOB, 10 Coins)
 
+// Solidity 버전을 지정
+pragma solidity ^0.5.6
+
+// N.B. 컨트랙트 함수는 함수를 실행한 TX의 정보를 받을 수 있는데 해당 정보를 msg 변수로 접근
+contract Coin {
+    // "minter"는 address 타입으로 선언된 상태; address 타입은 Ethereum에서 사용하는 160 bit 주소
+    // "public" 키워드는 상태를 다른 컨트랙트에서 읽을 수 있도록 허용
+    address public minter;
+    
+    // "balances"는 mapping 타입으로 address 타입 데이터를 key로, uint 타입 데이터를 value로 가지는 key-value mapping
+    // mapping은 타 프로그래밍 언어에서 사용하는 해시테이블 자료구조와 유사
+    // uninitialized 값들은 모두 0으로 초기화되어 있는 상태
+    mapping (address => uint) public balances;
+    
+    // event로 정의된 타입은 클라이언트(e.g., application using a platform-specific SDK/library)가
+    // listening 할 수 있는 데이터로 emit 키워드로 해당 타입의 객체를 생성하여 클라이언트에게 정보를 전달
+    // usage:
+    // /* in Solidity */
+    // emit Sent(an_address, another_address, 10);
+    // /* in Web3.js */
+    // Coin.Sent().watch({}, '', function(err, result) { ... });
+    event Sent(address from, address to, uint amount);
+    
+    // 생성자 함수는 컨트랙트가 생성될 때 한번 실행
+    // 아래 함수는 minter 상태 변수에 msg.sender 값을 대입 (함수를 실행한 사람의 주소)
+    constructor() public {
+        minter = msg.sender;
+    }
+    
+    // [omitted state variables, event definitions, and constructors for brevity]
+    // receiver 주소에 amount 만큼의 새로운 Coin 부여
+    // require 함수는 입력값이 true일 때만 다음으로 진행할 수 있음 (타 언어의 assert와 유사)
+    // require 함수는 특정 조건을 만족할 경우에만 함수를 실행할 수 있도록 강제할 때 사용
+    functoin mint(address receiver, uint amount) public {
+        require(msg.sender == minter);  // 함수를 실행한 사람이 minter(i.e., 컨트랙트 소유자)일때만 진행
+        require(amount <1e60);          // 새로 생성하는 Coin의 양이 1 * 10^60개 미만일 때만 진행
+        balances[receiver] += amount;   // reveiver 주소에 amount만큼을 더함
+    }
+    
+    // msg.sender가 receiver에게 amount 만큼 Coint을 전송(from을 인자로 받지 않아도 msg.sender로 유추할 수 있다)
+    function send(address reveiver, uint amount) public {
+        require(amount <= balances[msg.sender], "Insufficient balance."); // 잔고가 충분한지 확인
+        balances[msg.sender] -= amount;           // 잔고 차감
+        balances[revceiver] += amount;            // 잔고 증가
+        emit Sent(msg.sender, receiver, amount);  // 이벤트 생성
+    }
+}
+```
+
+msg.sender: 최초의 사용자
+tx의 sender: 누구든지 될 수 있음. 바로 앞의 컨트랙트 등...
+
+* Solidity 소스코드 컴파일링  
+Solidity 소스코드는 배포에 앞서 EVM에서 실행 가능한 형태로 컴파일(변환) 되어야 함
+**solc** - Solidity 컴파일러
+
+npm(linux, macos, Windows)으로 light version을 설치 가능(solcjs, partial feature)
+```npm install -g solc```
+
+apt(debian linux), brew(macos) 등으로 binary 설치 가능(solc, full feature)
+```
+(debian)
+sudo add-apt-repository ppa:ethereum/ethereum
+sudo apt-get update
+sudo apt-get install sloc
+
+(macos)
+brew tap ethereum/ethereum
+brew install solidity
+```
+
+* Solidity 소스코드 컴파일링
+SimpleStorage 컨트랙트를 정의하는 test.sol이 있다고 가정
+다음과 같은 방법으로 test.sol을 컴파일
+<img width="675" alt="image" src="https://user-images.githubusercontent.com/46364778/190287821-b3a5dc61-a78e-4b78-a413-6c6c4928ddce.png">  
+
+### Bytecode & ABI  
+Solidity 소스코드(.sol 파일)를 컴파일하면 Bytecode(.bin 파일)와 ABI(.abi 파일)가 생성  
+
+* **Bytecode**  
+컨트랙트를 배포할 때 블록체인에 저장하는 정보  
+Bytecode는 Solidity 소스코드를 EVM이 이해할 수 있는 형태로 변환한 것  
+컨트랙트 배포시 HEX로 표현된 Bytecode를 TX에 담아 노드에 전달  
+
+* **ABI(Application Binary Interface) a.k.a JSON interface**  
+ABI는 컨트랙트 함수를 JSON 형태로 표현한 정보로 EVM이 컨트랙트 함수를 실행할 때 필요  
+컨트랙트 함수를 실행하려는 사람은 ABI 정보를 노드에 제공  
+~~ 프로그램 헤더가 빠진 상태로 들어가 있어서 별도로 이렇게 말을 해줘야 함~~
+
+- - -
+
+### Using Klaytn SDK  
+Klaytn은 BApp 개발을 위해 필요한 SDK를 제공  
+caver-js는 Node.js로 Klaytn BApp을 만들 때 필요한 라이브러리를 제공  
+다음 [온라인 문서](https://docs.klaytn.com/sdk/caverjs)에서 사용 방법을 확인  
+
+* Baobab 테스트넷에 연결  
+```
+const Caver = require('caver-js');
+const caver = new Caver('https://api.baobab.klaytn.net:8651/');
+```  
+테스트넷의 토큰은 쉽게 구할 수 있도록 되어 있음. -> Faucet
+
+* klay.getBlockNumber()  
+```
+const Caver = require('caver-js');
+const caver = new Caver('https://api.baobab.klaytn.net:8651/');
+// getBlockNumber() returns a Promise object returning Number
+caver.klay.getBlockNumber(function(err, blockNumber) {
+ console.log(blockNumber);
+});
+// alternatively
+caver.klay.getBlockNumber().then(console.log);
+7092446
+```
+
+* klay.accounts.wallet  
+account들을 담아놓기 위한 월렛, 컨테이너  
+```
+const account = caver.klay.accounts.create();
+// in-memory wallet
+const wallet = caver.klay.accounts.wallet;
+wallet.add(account);
+console.log(wallet.length); // wallet에 저장된 어카운트 갯수를 리턴
+console.log(wallet[account.address]); // 해당 주소를 가지는 어카운트를 불러옴; 없을 경우 undefined
+console.log(wallet[0]); // 저장된 첫번째 어카운트를 불러옴; 없을 경우 undefined
+1
+{ address: '0x38aed90665...c4fb53faae', privateKey: '0xfca84955...a96e5c5f', index: 0 }
+{ address: '0x38aed90665...c4fb53faae', privateKey: '0xfca84955...a96e5c5f', index: 0 }
+```
+
+* 토큰전송TX 생성 & 서명  
+```
+wallet.clear(); wallet.create(2); // in-memory wallet 초기화 & 어카운트 2개 생성
+const tx = {
+  type: "VALUE_TRANSFER", // Klaytn은 TX 타입을 지정
+  from: wallet[0].address, // 첫번째 어카운트 주소
+  to: wallet[1].address, // 두번째 어카운트 주소
+  value: caver.utils.toPeb('1', 'KLAY'), // 1 KLAY 전송
+  gas: 300000 // TX가 사용할 수 있는 가스총량
+};
+// 첫번째 어카운트의 비밀키로 서명
+caver.klay.accounts.signTransaction(tx, wallet[0].privateKey).then(console.log);
+
+{ messageHash: '0xc95641e147622735347d69e33ce8d5704f1dd240c86ba078d8118b2881b81742',
+ v: '0x07f5', r: '0x1de39143f3...19e991d31e', s: '0x53d86c54...bf00e6db',
+ rawTransaction: '0x08f87f808505d21d...ed0f06bf00e6db',
+ txHash: '0xb57dd4ec...1f509ea2', senderTxHash: '0xb57dd4ec...1f509ea2' }
+```
+
+* 서명된 TX 전송  
+```
+const tx = { … };
+(async () => {
+    const signedTransaction = await caver.klay.accounts.signTransaction(tx, sender.privateKey);
+    await caver.klay.sendSignedTransaction(signedTransaction.rawTransaction)
+        .on('transactionHash', function(txhash) {
+            console.log('hash first', txhash);
+        })
+        .on('receipt', function(receipt) {
+            console.log('receipt later', receipt);
+        })
+        .on('error', function(err) {
+            console.error('something went wrong');
+        });
+})();
+```
+
+* 토큰전송TX + sendTransaction  
+```
+const tx = { … };
+caver.klay.sendTransaction(tx) // 서명 + 전송
+    .on('transactionHash', function (txhash) {
+        console.log("hash first", txhash);
+    })
+    .on('error', function (err) {
+        console.error('something went wrong');
+    })
+    .on('receipt', function (receipt) {
+        console.log("receipt later", receipt);
+    });
+```
+
+* 스마트 컨트랙트 배포  
+Solidity 코드를 컴파일해서 생긴 Bytecode를 블록에 저장  
+Truffle을 쓰는게 편함  
+```
+// 앞서 예제에서 본 SimpleStorage 컨트랙트의 ABI와 Bytecode를 사용
+const abi = [ … ];
+const contract = new caver.klay.Contract(abi);
+contract.deploy({ data: '6080604052348015...0029' })
+    .send({
+        from: wallet[1].address,
+        gas: 3000000,
+        value: 0
+    })
+    .on('receipt', function (receipt) {
+        console.log('contract deployed at', receipt.contractAddress); // 컨트랙트 주소가 receipt에 포함
+    })
+```
+
+* 스마트 컨트랙트 실행(mutation)  
+상태를 바꾸는 함수들 
+```
+const contract = new caver.klay.Contract(abi, '0x20e199c44768F2C39Cb771D2F96B13fE6D63a411');
+contract.methods.set(100) // SimpleStorage의 set 함수를 실행; 상태를 바꾸는 함수이기 때문에 TX로 실행
+ .send({
+    from: wallet[1].address,
+    gas: 300000
+ })
+ .on('error', function (hash) { … })
+ .on('transactionHash', function (hash) { … })
+ .on('receipt', function (receipt) { … });
+```
+
+* 스마트 컨트랙트 실행(constant)  
+```
+const contract = new caver.klay.Contract(abi, '0x20e199c44768F2C39Cb771D2F96B13fE6D63a411');
+// call 함수는 상태를 바꾸는 함수가 아니기 때문에 노드에서 바로 실행
+contract.methods.get().call(null, function (err, result) {
+ if (err == null) {
+    console.log(result);
+ } else {
+    console.error(err);
+ }
+});
+```
+
+- - -
