@@ -212,5 +212,98 @@ contract MappingExample {
 
 
 ### 3. Special Variables and Functions  
+1) Block and Transaction Properties  
+<img width="907" alt="image" src="https://user-images.githubusercontent.com/46364778/190935435-4a73bffb-2392-40de-97ff-05fffdb7e690.png">  
+
+blockhash -> 머클트리(exist 체크, inexist는 체크 어려움) 역산할 때 필요  
+block.number -> 몇번째 블록을 때리면 뭘 하자 이럴 때. 어려움. 컨트랙트는 자기 자신을 호출하는 매커니즘이 없어서 외부에서 누가 계속 queue를 주긴 해야함. 컨트랙트가 그 때마다 wake up 됨.  
+gasleft() returns -> 다른 컨트랙트의 무언가를 호출하려할 때 중요. 보통 한 컨트랙트 안에서 다 핸들링 다 되는데, 그럴 때가 있음. 가급적 컨트랙트는 간결하게 짜서 가스량 체크 안해도 되는게 좋음  
+컨트랙트의 함수가 실행되고 있는데 그 시점의 그 함수를 실행한 사람: msg.sender  
+함수의 identifier: msg.sig(보통 함수명을 해시해서 앞의 4바이트)  
+tx에 담겨진 클레이의 양: msg.value  
+tx는 한번 발생했을 때 다른 tx 일으킬 수 있음(internal tx). 그래서 최초의 tx을 누가 실행 했는지: tx.origin  
+
+
+2) Error Handling  
+* assert(bool condition):  
+condition이 false일 경우 실행 중인 함수가 변경한 내역을 모두 이전 상태로 되돌림(로직 체크에 사용)  
+* require(bool cond):  
+condition이 false일 경우 실행 중인 함수가 변경한 내역을 모두 이전 상태로 되돌림(외부 변수 검증에 사용)  
+* require(bool cond, string memory message):  
+require(bool)과 동일. 추가로 메세지를 전달.  
+
+3) Cryptographic Functions  
+해싱을 하면 가스비가 많이 듦. 오프체인에서 해시 다 하고 그 값을 전송하는게 쌈.  
+* keccack256(bytes memory input) returns (bytes32)  
+주어진 값으로 Keccak-256 해시를 생성  
+* sha256(bytes memory input) returns (bytes32)  
+주어진 값으로 SHA-256 해시를 생성  
+* ecrecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) returns (address)  
+서명(v, r, s)으로부터 어카운트 주소를 도출(서명 => 공개키 => 주소)  
+
 ### 4. Expressions and Control Structure  
+* Solidity 제어 구문  
+대부분의 프로그래밍 언어가 지원하는 제어 구문을 지원  
+if, else, while, do, for, break, continue, return  
+
+* 예외 처리 기능이 없음  
+i.e., try-catch 없음  
+즉, 모든 함수는 실패하면 안된다..ㅋㅋㅋ  
+
 ### 5. Contracts  
+#### Creating Contracts  
+* 일반적인 컨트랙트를 생성 => 배포  
+* 컨트랙트를 클래스처럼 사용  
+컨트랙트를 객체지향 프로그래밍에서 사용하는 클래스로 취급할 수 있음  
+new 키워드를 사용하여 컨트랙트를 생성하여 변수에 대입  
+<img width="778" alt="image" src="https://user-images.githubusercontent.com/46364778/190936380-e99c7b0f-5dce-4510-8b8d-c5f4217fa7a7.png">  
+
+이렇게 컨트랙트를 만들어서 상태변수로 집어넣을 수도 있고, 이미 만들어져 있는 컨트랙트를 참조할 때는 address를 컨트랙트로 쓸 수도 있음.(그 컨트랙트의 abi를 알고 있을 때만)  
+
+#### Visibility and Getters  
+함수의 visibility(공개정도)를 목적에 맞게 설정  
+* external  
+다른 컨트랙트에서 & 트랙잭션을 통해서 호출 가능  
+internal 호출 불가능 (i.e., f()는 안되지만 this.f()는 허용됨, 마치 외부에서 부르는 것마냥 accessor를 이용해야함)  
+
+* public  
+트랜잭션을 통해 호출 가능, internal 호출 가능  
+
+* internal  
+외부에서 호출 불가능, internal 호출 가능, 상속는 컨트랙트에서 호출 가능  
+
+* private  
+internal 호출 가능  
+
+#### Function Modifiers: pure vs. view  
+함수 제약을 설정하여 정해진 scope에서 동작할 수 있도록 설정  
+* pure  
+State Variable 접근 불가 i.e., READ (X), WRITE (X)  
+블록체인 이 함수를 올바르게 실행했다 라는 걸 볼 수 있음  
+ex) 평균 내는 함수. 상태변수랑 상관도 없고 변경 못하게 pure로 올려서 로직만 실행  
+
+* view  
+State Variable 변경 불가 i.e., READ (O), WRITE (X)  
+
+* (none)  
+제약 없음 i.e., READ (O), WRITE (O)  
+
+#### Fallback function  
+따지자면 default 함수  
+
+* 컨트랙트에 일치하는 함수가 없을 경우 실행 (i.e., no input/calldata)  
+단 하나만 정의 가능 & 함수명, 함수 인자, 반환값 없음  
+반드시 external로 선언  
+
+* 컨트랙트가 KLAY를 받으려면 payable fallback function이 필요  
+payable fallback이 없는 컨트랙트가 KLAY를 전송받으면 오류 발생  
+
+```
+contract Escrow {
+    event Deposited(address sender, uint amount);
+    // fallback function
+    function() external payable {
+        emit Deposited(msg.sender, msg.value);
+    }
+}
+```
