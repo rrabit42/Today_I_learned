@@ -119,9 +119,9 @@ contract Ballot {
 ### 2. Data Types  
 Solidity는 다음과 같은 자료형(Data Types)을 지원  
 
-* Booleans(bool)  
-* Integers(int/int8/int16/.../uint256/uint/uint8/uint16/.../uint256). 
-* **Address**  
+1) Booleans(bool)  
+2) Integers(int/int8/int16/.../uint256/uint/uint8/uint16/.../uint256). 
+3) **Address**  
 > 어카운트 주소를 표현(공개키에서 주소 도출하기 위해 해시를 만드는데 해시의 마지막 20바이트가 주소)  
 > 블록체인에서 저장할 수 있는 공간이 제한되어 있으니까 주소를 위한 자료형을 타이트하게 만든 것.(제일 많이 쓰는 자료형은 해시를 저장하기 위해 쓰는 32byte, 두번째가 주소!)  
 > * Klaytn 주소의 길이는 20바이트; address => bytes20 형변환 가능  
@@ -131,8 +131,8 @@ Solidity는 다음과 같은 자료형(Data Types)을 지원
 > contract가 특정 주소에 클레이를 주거나, 특정 주소가 다른 주소에게 클레이를 주거나. 실제 클레이가 오고 갈 수 있는 기능은 address payable만 가능.  
 > 실수로 어떤 주소에 보내는걸 막기 위해.  
 
-* **Fixed-size byte arrays (bytes1, bytes2, ..., bytes32)**  
-* **Reference Types**  
+4) **Fixed-size byte arrays (bytes1, bytes2, ..., bytes32)**  
+5) **Reference Types**  
 ```
 uint x = 10;
 uint y = x;
@@ -155,7 +155,7 @@ string memory t = s;
 > storage => memory / calldata  
 > anything => storage  
 
-* **Arrays**  
+6) **Arrays**  
 Javascript에서 배운 배열과 개념은 같으나 사용법이 상이(+다른 언어의 array list랑 비슷함. +storage로 사용되는 array는 크기가 바뀔 수 있음, memory는 크기 고정해야함)  
 > * State Variable로 사용할 때(i.e., 저장공간 = storage)  
 >> T[k] x; => k개의 T를 가진 배열 x 선언  
@@ -193,7 +193,7 @@ byte[]는 배열 아이템 간 31바이트 패딩이 추가됨
 바이트 데이터의 길이가 정해져있을 때는 value type의 bytes1, ..., bytes32를 사용  
 byte[]는 지양  
 
-* **Mapping Types**  
+7) **Mapping Types**  
 ```mapping (K => V) table;```  
 * 해시테이블과 유사, 배열처럼 사용  
 storage 영역에만 저장 가능 (i.e., state variable로만 선언 가능) -> 즉 함수 안에서 변수 선언 못함. 밖에서 선언하고 함수 안에서 참조, 데이터 추가  
@@ -208,8 +208,7 @@ contract MappingExample {
 }
 ```
 
-
-* Contract Types  
+8) Contract Types  
 
 
 ### 3. Special Variables and Functions  
