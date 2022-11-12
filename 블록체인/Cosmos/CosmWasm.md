@@ -108,3 +108,140 @@ DepsMut와 Deps의 차이
 execute에서는 DespMut를 넣고 query에서는 Deps를 넣음; immutable한 컨택스트 공유, 스토리지 읽기는 가능한데 쓰기는 안됨  
 
 ### 2편  
+counter contract 배포  
+당연히 컴파일부터!  
+wasmd, cargo, rustup이 설치가 되어있어야함  
+
+```rustup default stable```
+어떤 stable 채널에 어떤 툴체인으로 컴파일 진행할건지 지정  
+툴체인 -> 러스트의 컴파일러(stable, beta, nightly 3가지 버전있음)  
+stable이 최근에 릴리즈해서 사용할 것  
+rustup은 다양한 버전을 관리할 수 있는 패키지  
+
+cargo; 러스트패키지 매니저; 를 이용해서 의존성 다운로드, 라이브러리 다운로드, 컴파일, 빌드 실행할 수 있음  
+```cargo wasm```; config 옵션에 따라 명령어 수행하게 됨, 이 명령으로 빌드할 수 있게 됨 -> cargo.toml 파일 참고  
+```rustup target add wasm32-unknown-unknown```  
+cargo.toml  
+relase 플래그를 붙이면 cargo에서 toml에서 지정한 값들이 설정이 됨  
+
+컴파일된거 보려면 target가면 됨  
+```cd taget/wasm32-unknown-unknown/release```에 cosmwasm.wasm이 있음  
+```ls -lh```  
+1.8M를 올리는건 불가능. 너무 용량이 큼. 용량을 줄일 필요가 있음  
+
+rust compile 최적화 하는 방법! -> 가스 비용을 줄이기 위해  
+cosmwasm 컴파일 최적화 안하면 exist limit error 이런거 남. 컴파일러는 최적화를 하는게 필수다.  
+400KB가 넘어가면 배포가 안됨  
+
+1. rust flag 붙여서 컴파일러보고 사용하지 않는 파일을 지워달라  
+다시 cosmwasm 디렉토리로 와서  
+``` RUSTFLAGS='-C link-args=-s' cargo wasm```  
+rust compiler에게 옵션값 전달해주는건데 바이너리를 striping 해달라. 컴파일 후 쓰지 않는 코드들 삭제함으로써 파일의 용량을 줄여달라  
+다시 가서 용량 확인해보면 153K로 용량이 줄어든 것을 확인 가능  
+
+2. [rust-optimizer](https://github.com/CosmWasm/rust-optimizer) 툴 사용  
+
+counter example에 대한 wasm 바이너리 코드를 cosmwasm을 지원하는 블록체인 네트워크를 통해 배포  
+1. wasmd -> Go cli를 바탕으로 배포  
+2. 프론트엔드 node module 이용해 배포, cosm.js 이용  
+3. 오스모시스를 통해 osmosisd로 배포  
+
+**오스모시스**  
+코스모스SDK로 만든 AMM  
+
+tesetnet에서 permissoinless로 배포 가능  
+테스트넷은 오스모시스의 허가 받지 않고도 배포 할 수 있도록 권한 열어둠  
+
+rust의 환경설정부터! osmosisd 오스모시스 네트워크에 접속할 수 있게하는 것  
+```rustup default stable```해서 release 채널 만들기  
+```rustup target add wasm32-unknown-unknown``` 와즘을 컴파일 타겟으로 바꿈  
+cargo generate랑 run script 깔기 ```cargo install carog-generate --features vendored-openssl```, ```cargo install cargo-run-script```  
+
+오스모시스 테스트넷 환결 설정  
+```curl -sL https://get.osmosis.zone/install > i.py && python3 i.py```  
+그러면 osmosis node installer가 뜸  
+
+2번 선택. 클라이언트 노드  
+2번 테스트넷 선택  
+암호 입력  
+그럼 설치가 진행됨  
+디폴트 로케이션 선택  
+노드 이름은 OSMO  
+```source ~/.profile```  
+```brew install osmosis```  
+실행해서 업데이트 해줌  
+osmosisd를 이용해서 월렛을 생성해보도록 하겠음  
+```osmosisd keys add wallet```  
+새로운 월렛이 추가됨  
+오스모(기축코인)이 있어야 이용 가능  
+allthatnode에 faucet이 있는데 여기서 테스트넷 address 입력해서 받으면됨(https://www.allthatnode.com/faucet/osmosis.dsrv)  
+그럼 트랜잭션 해쉬가 뜸; ping.pub(코스모스 에코시스템 전체 블록체인 익스플로러)에서 확인 -> testnet.ping.pub에서 osmosis 찾아서 해시 입력  
+```osmosisd keys show -a wallet```; wallet address 뜸  
+```osmosisd query bank balances ${osmosisd keys show -a wallet)``` 그럼 osmo가 주어진 것을 볼 수 있음  
+
+이제 배포를 해보자  
+cd target/release 에 있는 cosmwasm.wasm을 배포해볼것  
+
+rpc endpoint가 필요; 블록체인 네트워크에 접속할 수 있게하기 위한 API를 받아 넣어야함  
+allthatnode 사이트에 가면 받을 수 있음(https://www.allthatnode.com/nodes.dsrv?protocol=osmosis)  
+새로운 프로젝트 만들기 dashboard에서 API key확인 가능  
+이걸 가지고 rpc 접근 가능. testnet의 rpc 주소  
+
+release 폴더에서 ```export NODE=(--node {testnet rpc})```  
+```echo $NODE``` 해서 확인 가능  
+```export TXFLAG=($NODE --chain-id osmo-test-4 --gas-prices 0.025uosmo --gas auto --gas-adjustment 1.3)```  
+testnet node id, 가스비 30% 더 낼 수 있음  
+```echo $TXFLAG```  
+cosmwasm 메인 디렉토리에서 실행  
+```RES=$(osmosisd tx wasm store ./target/wasm32-unknown-unknown/release/coswasm.wasm --from wallet $TXFLAG -y --output json -b block)```  
+gas estimate이 뜸  
+이제 블록체인에 업로드함  
+
+```echo $RES```하면 트랜잭션 receipt이 json형태로 볼 수 있음  
+바이트코드를 업로드했기 때문에 코드 id라는걸 알아야함  
+지금 바이트 코드가 몇번째 id일지가지고 우리가 인스턴스화 시킬 수 있음. 바이트 코드를 id를 통해 가리켜야 하니까  
+```CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')```  
+```echo $CODE_ID```이렇게 알 수 있음  
+
+이제 컨트랙트 업로드한걸 알 수 있음.  
+컨트랙트 인스턴스를 생성해보고 생성한 인스턴스로 컨트랙트를 실행해보자  
+
+오스모시스d에서 인스턴스 생성하는 법  
+1. osmosisd 이용  
+2. osmosis gui 이용  
+
+인스턴스를 만들기 위해서 초기화부터 하겠음  
+```INIT='{"count":2}'```  
+```echo $INIT```  
+초기 상태 설정하기 위해 instantiate 명령 실행  
+```osmosisd tx wasm instantiate $CODE_ID "$INIT" --from wallet --label "my first contract" $TXFLAG -y --no-admin```  
+txhash 등등이 뜸  
+ping.pub에서 확인; code_id, label 등 확인  
+배포된걸 확인했으니까 배포된 컨트랙트 정보 가져오기  
+```CONTRACT=$(osmosisd query wasm list-contract-by-code $CODE_ID --output json | jq -r '.contracts[0]')```  
+```echo $CONTRACT```  
+컨트랙트 주소알 수 있음  
+
+배포한 컨트랙트 잘 동작하는지 확인해보자  
+미디엄 참고
+```osmosisd tx wasm execute $CONTRACT "$TRY_INCREMENT" --from wallet $TXFLAG -y --amount 0.01osmo```  
+0.01 오스모랑, try increment 명령어를 함께 트랜잭션 날리면서 0.01 osmo 송금한것을 알 수 있음  
+이 트랜잭션해시 보면 알 수 있음  
+
+
+### 3편  
+
+
+
+## 출처  
+[1편 미디엄](https://bit.ly/3yEcNyx)    
+[2편 미디엄](https://abit.ly/dsrv-cosmwasm-counter-deploy)  
+[3편 미디엄](http://abit.ly/dsrv-cosmwasm-clicker-game)    
+
+
+
+
+
+
+
+
