@@ -168,7 +168,7 @@ cargo generate랑 run script 깔기 ```cargo install carog-generate --features v
 디폴트 로케이션 선택  
 노드 이름은 OSMO  
 ```source ~/.profile```  
-```brew install osmosis```  
+(m1은 osmosisd를 사용하려면 https://docs.osmosis.zone/osmosis-core/osmosisd/ 참고)  
 실행해서 업데이트 해줌  
 osmosisd를 이용해서 월렛을 생성해보도록 하겠음  
 ```osmosisd keys add wallet```  
